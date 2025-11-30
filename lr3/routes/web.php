@@ -1,6 +1,8 @@
+<?php
+
 use App\Http\Controllers\ItemController;
 
-Route::get('/', function() {
+Route::get('/', function () {
     return redirect()->route('items.index');
 });
 
