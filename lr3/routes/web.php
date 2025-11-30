@@ -7,3 +7,10 @@ Route::get('/', function () {
 });
 
 Route::resource('items', ItemController::class);
+
+
+Route::get('/test-image', function () {
+    return class_exists(Image::class)
+        ? 'OK'
+        : 'NO';
+});
