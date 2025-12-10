@@ -17,7 +17,7 @@
                 <p class="mb-3"><strong>Релиз:</strong> {{ $item->released_at ? $item->released_at->format('d.m.Y') : '—' }}</p>
 
                 <div class="mt-auto">
-                    <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#itemModal{{ $item->id }}">Подробнее</a>
+                    <a href="{{ route('items.show', $item) }}" class="btn btn-primary btn-sm">Подробнее</a>
                     <a href="{{ route('items.edit', $item) }}" class="btn btn-secondary btn-sm">Редактировать</a>
 
                     <form action="{{ route('items.destroy', $item) }}" method="post" class="d-inline"
@@ -30,8 +30,6 @@
             </div>
         </div>
     </div>
-
-    @include('items._modal', ['item' => $item])
     @endforeach
 </div>
 
