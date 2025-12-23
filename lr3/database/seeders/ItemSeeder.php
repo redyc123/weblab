@@ -4,11 +4,24 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Item;
+use App\Models\User;
 
 class ItemSeeder extends Seeder
 {
     public function run()
     {
+        $users = User::all();
+        if ($users->count() == 0) {
+            // If no users exist, create a default user
+            $user = User::factory()->create([
+                'name' => 'Default User',
+                'email' => 'default@example.com',
+                'password' => bcrypt('password'),
+                'username' => 'defaultuser'
+            ]);
+            $users = collect([$user]);
+        }
+
         $items = [
             [
                 'title' => 'Объект 1',
@@ -47,7 +60,9 @@ class ItemSeeder extends Seeder
             ],
         ];
 
-        foreach ($items as $data) {
+        foreach ($items as $index => $data) {
+            $user = $users->random(); // Assign randomly to any user
+            $data['user_id'] = $user->id;
             Item::create($data);
         }
     }

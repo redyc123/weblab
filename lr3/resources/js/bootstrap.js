@@ -1,5 +1,14 @@
 window._ = require('lodash');
 
+try {
+    window.Popper = require('popper.js').default;
+    window.$ = window.jQuery = require('jquery');
+
+    require('bootstrap');
+} catch (e) {
+    console.error('Bootstrap JS not loaded:', e);
+}
+
 /**
  * We'll load the axios HTTP library which allows us to easily issue requests
  * to our Laravel back-end. This library automatically handles sending the

@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 
 // Intervention Image v3
 use Intervention\Image\ImageManager;
@@ -12,10 +15,33 @@ use Intervention\Image\Drivers\Gd\Driver;
 
 class ItemController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function index()
     {
-        $items = Item::orderBy('created_at', 'desc')->paginate(10);
+        $items = Item::where('user_id', Auth::id())->orderBy('created_at', 'desc')->paginate(10);
         return view('items.index', compact('items'));
+    }
+
+    public function userItems(User $user)
+    {
+        $items = Item::where('user_id', $user->id)->orderBy('created_at', 'desc')->paginate(10);
+        return view('items.index', compact('items'));
+    }
+
+    public function usersIndex()
+    {
+        // Only admins can access the users list
+        $user = Auth::user();
+        if (!$user || !$user->is_admin) {
+            abort(403, 'Доступ разрешен только администратору.');
+        }
+
+        $users = \App\Models\User::all();
+        return view('users.index', compact('users'));
     }
 
     public function create()
@@ -58,6 +84,7 @@ class ItemController extends Controller
             $data['image'] = $path;
         }
 
+        $data['user_id'] = Auth::id();
         Item::create($data);
 
         return redirect()->route('items.index')->with('success', 'Item created successfully.');
@@ -65,16 +92,34 @@ class ItemController extends Controller
 
     public function show(Item $item)
     {
+        // Check if the user has permission to see this item
+        $user = Auth::user();
+        if ($item->user_id !== $user->id && !$user->is_admin) {
+            abort(403);
+        }
+
         return view('items.show', compact('item'));
     }
 
     public function edit(Item $item)
     {
+        // Check if the user can edit this item (owner or admin)
+        $user = Auth::user();
+        if ($item->user_id !== $user->id && !$user->is_admin) {
+            abort(403);
+        }
+
         return view('items.edit', compact('item'));
     }
 
     public function update(Request $request, Item $item)
     {
+        // Check if the user can update this item (owner or admin)
+        $user = Auth::user();
+        if ($item->user_id !== $user->id && !$user->is_admin) {
+            abort(403);
+        }
+
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -116,12 +161,95 @@ class ItemController extends Controller
 
     public function destroy(Item $item)
     {
+        // Check if the user can delete this item (owner)
+        $user = Auth::user();
+        if ($item->user_id !== $user->id && !$user->is_admin) {
+            abort(403);
+        }
+
+        if ($item->user_id === $user->id) {
+            // Regular users can only soft delete their own items
+            // Don't delete the image file during soft delete in case the item is restored
+            $item->delete(); // This will soft delete due to SoftDeletes trait
+
+            return redirect()->route('items.index')->with('success', 'Item soft deleted successfully.');
+        } elseif ($user->is_admin) {
+            // Admins have additional options - for this implementation,
+            // they can permanently delete if needed (via a different route)
+            // Don't delete the image file during soft delete in case the item is restored
+            $item->delete(); // This will soft delete due to SoftDeletes trait
+
+            return redirect()->route('items.index')->with('success', 'Item soft deleted successfully.');
+        }
+
+        abort(403);
+    }
+
+    public function forceDestroy($id)
+    {
+        // Only admins can permanently delete items
+        $user = Auth::user();
+        if (!$user->is_admin) {
+            abort(403);
+        }
+
+        $item = Item::withTrashed()->findOrFail($id);
+
         if ($item->image && Storage::exists('public/' . $item->image)) {
             Storage::delete('public/' . $item->image);
         }
 
-        $item->delete();
+        $item->forceDelete();
 
-        return redirect()->route('items.index')->with('success', 'Item deleted.');
+        return redirect()->route('items.index')->with('success', 'Item permanently deleted.');
+    }
+
+    public function restore($id)
+    {
+        // Only admins can restore soft deleted items
+        $item = Item::withTrashed()->findOrFail($id);
+
+        $user = Auth::user();
+        if (!$user->is_admin) {
+            abort(403);
+        }
+
+        $item->restore();
+
+        return redirect()->route('items.index')->with('success', 'Item restored successfully.');
+    }
+
+    public function trashed()
+    {
+        // Debug: Show current user info
+        $user = Auth::user();
+
+        \Log::info('Trashed method accessed', [
+            'user_exists' => $user ? true : false,
+            'user_id' => $user ? $user->id : null,
+            'is_admin' => $user ? ($user->is_admin ? 'yes' : 'no') : 'N/A',
+            'is_admin_raw' => $user ? $user->getOriginal('is_admin') : 'N/A'
+        ]);
+
+        // Show soft deleted items - only for admins
+        if (!Auth::check()) {
+            \Log::info('Auth check failed');
+            abort(403, 'Вы должны войти в систему.');
+        }
+
+        if (!$user || !$user->is_admin) {
+            \Log::info('Admin check failed', [
+                'user_exists' => $user ? true : false,
+                'is_admin_value' => $user ? $user->is_admin : 'null'
+            ]);
+            abort(403, 'Доступ разрешен только администратору.');
+        }
+
+        $items = Item::onlyTrashed()
+                     ->with('user') // Eager load the user relationship to avoid n+1 and potential issues
+                     ->orderBy('deleted_at', 'desc')
+                     ->paginate(10);
+
+        return view('items.trashed', compact('items'));
     }
 }
