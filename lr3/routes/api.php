@@ -23,3 +23,7 @@ Route::apiResource('items', \App\Http\Controllers\Api\ItemController::class)->mi
 
 // API routes for Comments
 Route::apiResource('comments', \App\Http\Controllers\Api\CommentController::class)->middleware('auth:api');
+
+// API routes for Users
+Route::apiResource('users', \App\Http\Controllers\Api\UserController::class)->middleware('auth:api');
+Route::post('/users/{user}/toggle-friendship', [\App\Http\Controllers\Api\UserController::class, 'toggleFriendship'])->middleware('auth:api');

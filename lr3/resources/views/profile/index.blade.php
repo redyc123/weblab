@@ -58,8 +58,8 @@
                                             @foreach($tokens as $token)
                                             <tr>
                                                 <td>{{ $token->name }}</td>
-                                                <td>{{ $token->created_at->format('d.m.Y H:i:s') }}</td>
-                                                <td>{{ $token->last_used_at ? $token->last_used_at->format('d.m.Y H:i:s') : 'Не использовался' }}</td>
+                                                <td>{{ \Carbon\Carbon::parse($token->created_at)->format('d.m.Y H:i:s') }}</td>
+                                                <td>{{ $token->last_used_at ? \Carbon\Carbon::parse($token->last_used_at)->format('d.m.Y H:i:s') : 'Не использовался' }}</td>
                                                 <td>
                                                     <button class="btn btn-sm btn-danger delete-token" data-token-id="{{ $token->id }}">Удалить</button>
                                                 </td>

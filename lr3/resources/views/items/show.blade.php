@@ -16,9 +16,12 @@
                     <p><strong>Цена:</strong> {{ $item->price ?? '—' }}</p>
                     <p><strong>Релиз:</strong> {{ $item->released_at_formatted ?? '—' }}</p>
                     <p><strong>Категория:</strong> {{ $item->category ?? '—' }}</p>
-                    @if(Auth::user()->is_admin)
-                        <p><small class="text-muted">Пользователь: {{ $item->user->name ?? 'N/A' }}</small></p>
-                    @endif
+                    <p>
+                        <small class="text-muted">Пользователь: {{ $item->user->name ?? 'N/A' }}</small>
+                        @if($item->user_id != Auth::id() && Auth::user()->following->contains($item->user->id))
+                            <span class="badge bg-success ms-2">Друг</span>
+                        @endif
+                    </p>
 
                     <div class="mt-3">
                         <a href="{{ route('items.index') }}" class="btn btn-secondary">Назад к списку</a>

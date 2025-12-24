@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Token;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Laravel\Passport\Passport;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -24,6 +26,9 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
+
+        // Register custom Passport Token model
+        Passport::useTokenModel(Token::class);
 
         // Gate for updating items - only owner or admin can update
         Gate::define('update-item', function ($user, $item) {

@@ -21,9 +21,10 @@
                 <a class="btn btn-outline-primary me-2" href="{{ route('profile.index') }}">Профиль</a>
                 <a class="btn btn-outline-primary me-2" href="{{ route('items.create') }}">Добавить</a>
                 <a class="btn btn-outline-info me-2" href="{{ route('items.feed') }}">Лента</a>
-                @if(Auth::user()->is_admin)
-                    <a class="btn btn-outline-info me-2" href="{{ route('users.index') }}">Пользователи</a>
-                @endif
+                <a class="btn btn-outline-info me-2" href="{{ route('users.browse') }}">Пользователи</a>
+                <!-- @if(Auth::user()->is_admin)
+                    <a class="btn btn-outline-info me-2" href="{{ route('users.index') }}">Все пользователи</a>
+                @endif -->
                 <form method="POST" action="{{ route('logout') }}" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-outline-danger">Выйти</button>

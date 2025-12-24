@@ -28,8 +28,15 @@ class ItemController extends Controller
 
     public function userItems(User $user)
     {
+        // Any authenticated user can view another user's items page
+        $currentUser = Auth::user();
+
+        // Add friendship status to the user
+        $is_friend = $currentUser->following()->where('friend_id', $user->id)->exists();
+        $user->is_friend = $is_friend;
+
         $items = Item::where('user_id', $user->id)->orderBy('created_at', 'desc')->paginate(10);
-        return view('items.index', compact('items'));
+        return view('items.user_items', compact('items', 'user'));
     }
 
     public function usersIndex()
@@ -42,6 +49,20 @@ class ItemController extends Controller
 
         $users = \App\Models\User::all();
         return view('users.index', compact('users'));
+    }
+
+    public function browseUsers()
+    {
+        // Regular users can browse all users (except themselves)
+        $currentUser = Auth::user();
+        $users = \App\Models\User::where('id', '!=', $currentUser->id)->get();
+
+        // Add friendship status to each user
+        foreach ($users as $user) {
+            $user->is_friend = $currentUser->following()->where('friend_id', $user->id)->exists();
+        }
+
+        return view('users.browse', compact('users'));
     }
 
     public function create()
@@ -92,11 +113,16 @@ class ItemController extends Controller
 
     public function show(Item $item)
     {
-        // Check if the user has permission to see this item
+        // Any authenticated user can view any item
         $user = Auth::user();
-        if ($item->user_id !== $user->id && !$user->is_admin) {
-            abort(403);
+
+        // Check if the current user is friend of the item owner
+        $is_friend = false;
+        if ($user) {
+            $is_friend = $user->following()->where('friend_id', $item->user_id)->exists();
         }
+
+        $item->is_friend = $is_friend;
 
         return view('items.show', compact('item'));
     }

@@ -103,12 +103,12 @@
                         @endforelse
                     </ul>
 
-                    <div class="mt-3">
+                    <!-- <div class="mt-3">
                         <h6>Добавить друга</h6>
                         <form method="GET" action="{{ route('users.index') }}">
                             <button type="submit" class="btn btn-outline-primary btn-sm">Просмотреть пользователей</button>
                         </form>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>

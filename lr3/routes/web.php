@@ -41,9 +41,10 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 
     // Friendship routes
-    Route::post('/users/{user}/toggle-friendship', [CommentController::class, 'toggleFriendship'])->name('users.toggle-friendship');
+    Route::post('/users/{user}/toggle-friendship', [UserController::class, 'toggleFriendship'])->name('users.toggle-friendship');
 
     Route::get('/users', [ItemController::class, 'usersIndex'])->name('users.index');
+    Route::get('/users/browse', [ItemController::class, 'browseUsers'])->name('users.browse');
     Route::get('/users/{user}', [ItemController::class, 'userItems'])->name('users.items');
 
     // Profile route for API tokens
