@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
@@ -44,6 +45,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/users', [ItemController::class, 'usersIndex'])->name('users.index');
     Route::get('/users/{user}', [ItemController::class, 'userItems'])->name('users.items');
+
+    // Profile route for API tokens
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::post('/profile/token', [ProfileController::class, 'createToken'])->name('profile.token.create');
+    Route::delete('/profile/token/{tokenId}', [ProfileController::class, 'deleteToken'])->name('profile.token.delete');
 
     // Temporary test route
     Route::get('/test-trashed', function () {

@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'LR3 Laravel')</title>
     <link rel="stylesheet" href="{{ mix('css/app.css') }}">
 </head>
@@ -17,6 +18,7 @@
                     <span class="badge bg-warning me-3">ADMIN</span>
                 @endif
                 <a class="btn btn-outline-secondary me-2" href="{{ route('dashboard') }}">Панель</a>
+                <a class="btn btn-outline-primary me-2" href="{{ route('profile.index') }}">Профиль</a>
                 <a class="btn btn-outline-primary me-2" href="{{ route('items.create') }}">Добавить</a>
                 <a class="btn btn-outline-info me-2" href="{{ route('items.feed') }}">Лента</a>
                 @if(Auth::user()->is_admin)

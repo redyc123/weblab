@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// API routes for Items
+Route::apiResource('items', \App\Http\Controllers\Api\ItemController::class)->middleware('auth:api');
+
+// API routes for Comments
+Route::apiResource('comments', \App\Http\Controllers\Api\CommentController::class)->middleware('auth:api');
