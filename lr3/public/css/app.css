@@ -5948,7 +5948,7 @@ button.bg-info:focus {
 }
 
 .bg-warning {
-  background-color: #ffc107 !important;
+  background-color: #ffc107;
 }
 
 a.bg-warning:hover, a.bg-warning:focus,

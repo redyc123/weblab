@@ -53,7 +53,6 @@ class ItemController extends Controller
 
     public function browseUsers()
     {
-        // Regular users can browse all users (except themselves)
         $currentUser = Auth::user();
         $users = \App\Models\User::where('id', '!=', $currentUser->id)->get();
 
