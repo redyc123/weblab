@@ -5,11 +5,14 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>Список объектов</h1>
-    @auth
-        @if(Auth::user()->is_admin)
-            <a href="{{ route('items.trashed') }}" class="btn btn-warning">Удаленные элементы</a>
-        @endif
-    @endauth
+    <div>
+        <a href="{{ route('items.feed') }}" class="btn btn-info me-2">Лента</a>
+        @auth
+            @if(Auth::user()->is_admin)
+                <a href="{{ route('items.trashed') }}" class="btn btn-warning">Удаленные элементы</a>
+            @endif
+        @endauth
+    </div>
 </div>
 
 <div class="row">

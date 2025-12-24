@@ -18,6 +18,7 @@
                 @endif
                 <a class="btn btn-outline-secondary me-2" href="{{ route('dashboard') }}">Панель</a>
                 <a class="btn btn-outline-primary me-2" href="{{ route('items.create') }}">Добавить</a>
+                <a class="btn btn-outline-info me-2" href="{{ route('items.feed') }}">Лента</a>
                 @if(Auth::user()->is_admin)
                     <a class="btn btn-outline-info me-2" href="{{ route('users.index') }}">Пользователи</a>
                 @endif

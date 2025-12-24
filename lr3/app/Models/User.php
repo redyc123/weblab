@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -53,5 +55,39 @@ class User extends Authenticatable
     public function getRouteKeyName()
     {
         return 'username';
+    }
+
+    /**
+     * Get the comments for the user.
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(\App\Models\Comment::class);
+    }
+
+    /**
+     * Get the items created by the user.
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(\App\Models\Item::class);
+    }
+
+    /**
+     * Get the users that this user is following (friends).
+     */
+    public function following(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'friendships', 'user_id', 'friend_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Get the users that are following this user (followers).
+     */
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'friendships', 'friend_id', 'user_id')
+                    ->withTimestamps();
     }
 }

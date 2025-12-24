@@ -252,4 +252,26 @@ class ItemController extends Controller
 
         return view('items.trashed', compact('items'));
     }
+
+    /**
+     * Display the user's feed with items from their friends.
+     */
+    public function feed()
+    {
+        $user = Auth::user();
+
+        // Get the IDs of the user's friends
+        $friendIds = $user->following()->pluck('users.id')->toArray();
+
+        // Include current user's ID to show their own posts too
+        $userIds = array_merge($friendIds, [$user->id]);
+
+        // Get items from friends and the user, ordered by creation date
+        $items = Item::whereIn('user_id', $userIds)
+                     ->with('user', 'comments') // Eager load user and comments
+                     ->orderBy('created_at', 'desc')
+                     ->paginate(10);
+
+        return view('items.feed', compact('items', 'user'));
+    }
 }

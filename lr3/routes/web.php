@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\CommentController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 
@@ -28,8 +29,18 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/items/{id}/force', [ItemController::class, 'forceDestroy'])->name('items.forceDestroy.post');
     Route::post('/items/{id}/restore', [ItemController::class, 'restore'])->name('items.restore');
 
+    // Feed route for user's friends' items
+    Route::get('/feed', [ItemController::class, 'feed'])->name('items.feed');
+
     // Now define the resource route after specific routes
     Route::resource('items', ItemController::class);
+
+    // Comments routes
+    Route::post('/comments', [CommentController::class, 'store'])->name('comments.store');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+
+    // Friendship routes
+    Route::post('/users/{user}/toggle-friendship', [CommentController::class, 'toggleFriendship'])->name('users.toggle-friendship');
 
     Route::get('/users', [ItemController::class, 'usersIndex'])->name('users.index');
     Route::get('/users/{user}', [ItemController::class, 'userItems'])->name('users.items');
