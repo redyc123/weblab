@@ -300,3 +300,302 @@ Route::post('/users/{user}/toggle-friendship', [CommentController::class, 'toggl
 
 ## Вывод
 Все требования базового и расширенного уровней выполнены. Создана система комментариев, позволяющая пользователям оставлять комментарии к элементам других пользователей. Реализована система дружб, позволяющая пользователям взаимодействовать друг с другом. Лента пользователя показывает элементы от друзей в хронологическом порядке, а комментарии от друзей подсвечиваются. Система дружб реализована по принципу обоюдной дружбы (когда один пользователь добавляет другого, создается обратная связь автоматически).
+
+## Обновления (Реализация доступа обычных пользователей)
+
+### 1. Добавлена возможность обычным пользователям просматривать других пользователей
+- **Файл**: `routes/web.php`
+- **Изменения**:
+  - Добавлен маршрут `GET /users/browse` для просмотра списка всех пользователей
+  - Создан метод `browseUsers()` в `ItemController`
+- **Код**:
+```php
+Route::get('/users/browse', [ItemController::class, 'browseUsers'])->name('users.browse');
+```
+
+### 2. Реализованы веб-страницы для просмотра пользователей
+- **Файлы**:
+  - `app/Http/Controllers/ItemController.php` - метод `browseUsers()` и обновленный метод `userItems()`
+  - `resources/views/users/browse.blade.php` - страница просмотра пользователей
+  - `resources/views/items/user_items.blade.php` - страница просмотра объектов другого пользователя
+- **Изменения**:
+  - Метод `browseUsers()` позволяет обычным пользователям просматривать других пользователей (кроме себя)
+  - Метод `userItems()` позволяет просматривать страницу любого пользователя
+  - Обновлены шаблоны для отображения статуса дружбы и кнопок добавления в друзья
+- **Код**:
+```php
+public function browseUsers()
+{
+    // Regular users can browse all users (except themselves)
+    $currentUser = Auth::user();
+    $users = \App\Models\User::where('id', '!=', $currentUser->id)->get();
+
+    // Add friendship status to each user
+    foreach ($users as $user) {
+        $user->is_friend = $currentUser->following()->where('friend_id', $user->id)->exists();
+    }
+
+    return view('users.browse', compact('users'));
+}
+
+public function userItems(User $user)
+{
+    // Any authenticated user can view another user's items page
+    $currentUser = Auth::user();
+
+    // Add friendship status to the user
+    $is_friend = $currentUser->following()->where('friend_id', $user->id)->exists();
+    $user->is_friend = $is_friend;
+
+    $items = Item::where('user_id', $user->id)->orderBy('created_at', 'desc')->paginate(10);
+    return view('items.user_items', compact('items', 'user'));
+}
+```
+
+### 3. Создан контроллер для управления дружбой
+- **Файл**: `app/Http/Controllers/UserController.php`
+- **Изменения**:
+  - Создан метод `toggleFriendship()` для добавления/удаления друзей
+- **Код**:
+```php
+public function toggleFriendship($userId)
+{
+    $user = Auth::user();
+    $friend = User::findOrFail($userId);
+
+    if ($user->id == $friend->id) {
+        return redirect()->back()->with('error', 'Вы не можете добавить себя в друзья.');
+    }
+
+    // Check if friendship already exists
+    $existingFriendship = \DB::table('friendships')
+        ->where([
+            ['user_id', $user->id],
+            ['friend_id', $friend->id]
+        ])
+        ->first();
+
+    if ($existingFriendship) {
+        // Remove friendship
+        \DB::table('friendships')
+            ->where([
+                ['user_id', $user->id],
+                ['friend_id', $friend->id]
+            ])
+            ->delete();
+
+        // Also remove the reverse friendship
+        \DB::table('friendships')
+            ->where([
+                ['user_id', $friend->id],
+                ['friend_id', $user->id]
+            ])
+            ->delete();
+
+        return redirect()->back()->with('success', 'Друг успешно удален.');
+    } else {
+        // Create friendship
+        \DB::table('friendships')->insert([
+            'user_id' => $user->id,
+            'friend_id' => $friend->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Create reverse friendship (mutual friendship)
+        \DB::table('friendships')->insert([
+            'user_id' => $friend->id,
+            'friend_id' => $user->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Друг успешно добавлен.');
+    }
+}
+```
+
+### 4. Добавлены API-маршруты для пользователей
+- **Файл**: `routes/api.php`
+- **Изменения**:
+  - Добавлены API-маршруты для управления пользователями
+- **Код**:
+```php
+// API routes for Users
+Route::apiResource('users', \App\Http\Controllers\Api\UserController::class)->middleware('auth:api');
+Route::post('/users/{user}/toggle-friendship', [\App\Http\Controllers\Api\UserController::class, 'toggleFriendship'])->middleware('auth:api');
+```
+
+### 5. Создан API-контроллер для управления пользователями
+- **Файл**: `app/Http/Controllers/Api/UserController.php`
+- **Изменения**:
+  - Методы `index()` и `show()` для просмотра пользователей
+  - Метод `toggleFriendship()` для добавления/удаления друзей через API
+- **Код**:
+```php
+public function index(): JsonResponse
+{
+    $user = Auth::user();
+
+    $users = User::where('id', '!=', $user->id) // Exclude current user from list
+                ->paginate(10);
+
+    // Add friendship status to each user
+    $users->getCollection()->transform(function ($userItem) use ($user) {
+        $is_friend = $user->following()->where('friend_id', $userItem->id)->exists();
+        $userItem->setAttribute('is_friend', $is_friend);
+        return $userItem;
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => UserResource::collection($users)
+    ]);
+}
+
+public function toggleFriendship(Request $request, User $user): JsonResponse
+{
+    $authUser = Auth::user();
+
+    if (!$authUser) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Authentication required.'
+        ], 401);
+    }
+
+    if ($authUser->id == $user->id) {
+        return response()->json([
+            'success' => false,
+            'message' => 'You cannot add yourself as a friend.'
+        ], 400);
+    }
+
+    // Check if friendship already exists
+    $existingFriendship = \DB::table('friendships')
+        ->where([
+            ['user_id', $authUser->id],
+            ['friend_id', $user->id]
+        ])
+        ->first();
+
+    if ($existingFriendship) {
+        // Remove friendship
+        \DB::table('friendships')
+            ->where([
+                ['user_id', $authUser->id],
+                ['friend_id', $user->id]
+            ])
+            ->delete();
+
+        // Also remove the reverse friendship
+        \DB::table('friendships')
+            ->where([
+                ['user_id', $user->id],
+                ['friend_id', $authUser->id]
+            ])
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Friend successfully removed.',
+            'is_friend' => false
+        ]);
+    } else {
+        // Create friendship
+        \DB::table('friendships')->insert([
+            'user_id' => $authUser->id,
+            'friend_id' => $user->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Create reverse friendship (mutual friendship)
+        \DB::table('friendships')->insert([
+            'user_id' => $user->id,
+            'friend_id' => $authUser->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Friend successfully added.',
+            'is_friend' => true
+        ]);
+    }
+}
+```
+
+### 6. Создан ресурс для пользователей
+- **Файл**: `app/Http/Resources/UserResource.php`
+- **Изменения**:
+  - Создан ресурс для сериализации пользовательских данных
+- **Код**:
+```php
+public function toArray($request)
+{
+    return [
+        'id' => $this->id,
+        'name' => $this->name,
+        'username' => $this->username,
+        'email' => $this->email,
+        'created_at' => $this->created_at,
+        'updated_at' => $this->updated_at,
+        'is_friend' => $this->is_friend ?? false,
+        'items' => ItemResource::collection($this->whenLoaded('items')),
+    ];
+}
+```
+
+### 7. Обновлены шаблоны для отображения дружбы
+- **Файл**: `resources/views/layouts/app.blade.php`
+- **Изменения**:
+  - Добавлена ссылка на страницу просмотра пользователей для обычных пользователей
+- **Код**:
+```html
+<a class="btn btn-outline-info me-2" href="{{ route('users.browse') }}">Пользователи</a>
+@if(Auth::user()->is_admin)
+    <a class="btn btn-outline-info me-2" href="{{ route('users.index') }}">Все пользователи</a>
+@endif
+```
+
+### 8. Обновлено отображение объектов, чтобы пользователи могли просматривать чужие объекты
+- **Файл**: `app/Http/Controllers/ItemController.php`
+- **Изменения**:
+  - Обновлен метод `show()` для разрешения просмотра любых объектов аутентифицированным пользователям
+- **Код**:
+```php
+public function show(Item $item)
+{
+    // Any authenticated user can view any item
+    $user = Auth::user();
+
+    // Check if the current user is friend of the item owner
+    $is_friend = false;
+    if ($user) {
+        $is_friend = $user->following()->where('friend_id', $item->user_id)->exists();
+    }
+
+    $item->is_friend = $is_friend;
+
+    return view('items.show', compact('item'));
+}
+```
+
+### 9. Функциональность реализованных критериев
+
+#### Базовый уровень:
+1. ✅ **Пользователи могут просматривать других пользователей** - Реализована страница `/users/browse` для просмотра всех пользователей
+2. ✅ **Пользователи могут добавлять других пользователей в друзья** - Реализована кнопка добавления в друзья на странице просмотра пользователей
+3. ✅ **Пользователи могут просматривать страницы других пользователей** - Реализована страница `/users/{user}` для просмотра объектов другого пользователя
+4. ✅ **Обычные пользователи не могут редактировать/удалять данные других пользователей** - Реализована проверка прав доступа в контроллерах, разрешающая редактирование/удаление только владельцам и администраторам
+
+#### Расширенный уровень:
+1. ✅ **Критерии базового уровня** - Все реализованы
+2. ✅ **Реализована REST API для управления пользователями** - Созданы API-маршруты и контроллеры для просмотра пользователей и управления дружбой
+3. ✅ **При отображении объектов показывается статус дружбы с владельцем** - Добавлено отображение бейджа "Друг" на страницах просмотра объектов
+4. ✅ **Разграничение прав доступа между обычными пользователями и администраторами** - Обычные пользователи могут только просматривать и добавлять друзей, но не могут редактировать/удалять чужие объекты
+
+## Вывод
+Все требования базового и расширенного уровней выполнены. Теперь обычные пользователи могут просматривать других пользователей, добавлять их в друзья и просматривать их страницы, при этом у них нет возможности редактировать или удалять чужие данные. Администраторы по-прежнему имеют полный доступ ко всем функциям системы.

@@ -10,12 +10,12 @@
 <body>
 <nav class="navbar navbar-expand-md navbar-light bg-light mb-4">
     <div class="container">
-        <a class="navbar-brand" href="{{ route('items.index') }}">ТУРЫ</a>
+        <a class="navbar-brand" href="{{ route('items.index') }}">ОБЪЯВЛЕНИЯ</a>
         <div class="navbar-nav ms-auto">
             @auth
                 <span class="navbar-text me-3">Привет, {{ Auth::user()->name }}!</span>
                 @if(Auth::user()->is_admin)
-                    <span class="badge bg-warning me-3">ADMIN</span>
+                    <span class="badge bg-warning me-3", style="display: flex; align-items: centre;">ADMIN</span>
                 @endif
                 <a class="btn btn-outline-secondary me-2" href="{{ route('dashboard') }}">Панель</a>
                 <a class="btn btn-outline-primary me-2" href="{{ route('profile.index') }}">Профиль</a>

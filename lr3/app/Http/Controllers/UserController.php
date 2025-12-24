@@ -11,10 +11,10 @@ class UserController extends Controller
     /**
      * Toggle friendship status with the specified user.
      */
-    public function toggleFriendship($userId)
+    public function toggleFriendship($username)
     {
         $user = Auth::user();
-        $friend = User::findOrFail($userId);
+        $friend = User::where('username', $username)->firstOrFail();
 
         if ($user->id == $friend->id) {
             return redirect()->back()->with('error', 'Вы не можете добавить себя в друзья.');
